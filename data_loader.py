@@ -2,13 +2,13 @@ import json
 
 def load_data(file_path='./data/MMCoQA_dev.txt'):
     """
-    Load data from the MMCoQA JSON file.
+    Load data from the MMCoQA .txt file where each line is in JSON format.
 
     Args:
-        file_path (str): Path to the JSON file.
-        
+        file_path (str): Path to the .txt file.
+
     Returns:
-        dict: Parsed JSON data.
+        list: Parsed JSON data.
     """
     with open(file_path, 'r') as file:
         data = [json.loads(line) for line in file.readlines()]
@@ -16,7 +16,8 @@ def load_data(file_path='./data/MMCoQA_dev.txt'):
 
 
 if __name__ == "__main__":
-    # Load the data
+    # Test the loader
     data = load_data()
+    print(f"Loaded {len(data)} questions.")
     # Print the second question in the first dialogue for verification
     print(data[1]['history'][0]['question'])
