@@ -2,7 +2,7 @@ import json
 import pandas as pd
 
 
-def load_data(file_path: str) -> list:
+def load_data(file_path: str) -> list[dict]:
     """
     Generic loader for data stored in lines in JSON format.
 
@@ -20,7 +20,7 @@ def load_data(file_path: str) -> list:
         print(f"Error loading data from {file_path}: {e}")
         return []
 
-def group_by_conversation(q_data):
+def group_by_conversation(q_data: list[dict]) -> dict[str, list[dict]]:
     """
     Groups the flat list of questions into conversations based on their 'qid' prefix.
 
@@ -39,7 +39,7 @@ def group_by_conversation(q_data):
         conversations[conv_id].append(q)        
     return conversations
 
-def construct_lookups(evidence_data: list) -> dict:
+def construct_lookups(evidence_data: list[dict]) -> dict[str, dict]:
     """
     Construct a lookup dictionary for fast access to evidence content by 'id'.
 
@@ -51,7 +51,7 @@ def construct_lookups(evidence_data: list) -> dict:
     """
     return {item['id']: item for item in evidence_data}
 
-def construct_table_from_lookups(tab_json: dict) -> pd.DataFrame:
+def construct_table_from_lookups(tab_json: dict[str, dict]) -> pd.DataFrame:
     """
     Construct a table for a JSON-format table evidence in a DataFrame format.
 
@@ -66,51 +66,52 @@ def construct_table_from_lookups(tab_json: dict) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=headers)
     return df
 
-def prepare_all_data(q_path, img_path, tab_path, txt_path):
+def prepare_all_data(qs_path: str, imgs_path: str, tabs_path: str, txts_path: str) -> tuple[dict[str, list[dict]], dict[str, dict], dict[str, dict], dict[str, dict]]:
     """
     Prepares all data for images, tables, and texts against each question.
 
     Args:
-        q_path (str): Path to the file associating questions with their evidences' doc IDs.
-        img_path (str): Path to the file associating images with their doc IDs.
-        tab_path (str): Path to the file associating tables with their doc IDs.
-        txt_path (str): Path to the file associating texts with their doc IDs.
+        qs_path (str): Path to the file associating questions with their evidences' doc IDs.
+        imgs_path (str): Path to the file associating images with their doc IDs.
+        tabs_path (str): Path to the file associating tables with their doc IDs.
+        txts_path (str): Path to the file associating texts with their doc IDs.
 
     Returns:
-        prepared_data (dict, dict, dict): 
+        tuple(dict, dict, dict, dict): Grouped conversations, image lookups, table lookups, and text lookups.
     """
     print("Step 1: Loading all raw data files...")
-    q_data = load_data(q_path)
-    img_data = load_data(img_path)
-    tab_data = load_data(tab_path)
-    txt_data = load_data(txt_path)
+    qs_data = load_data(qs_path)
+    imgs_data = load_data(imgs_path)
+    tabs_data = load_data(tabs_path)
+    txts_data = load_data(txts_path)
 
     print("Step 2: Grouping questions into conversations...")
     convs = group_by_conversation(q_data)
 
     print("Step 3: Constructing lookups for all modalities' evidences...")
-    img_lookups = construct_lookups(img_data)
-    tab_lookups = construct_lookups(tab_data)
-    txt_lookups = construct_lookups(txt_data)
-    
+    imgs_lookups = construct_lookups(imgs_data)
+    tabs_lookups = construct_lookups(tabs_data)
+    txts_lookups = construct_lookups(txts_data)
+
     print("Data Preparation Complete.\n")
-    return convs, img_lookups, tab_lookups, txt_lookups
+    return convs, imgs_lookups, tabs_lookups, txts_lookups
 
 
 if __name__ == "__main__":
-    q_path = r'.\data\MMCoQA_dev.txt'
-    img_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_images.jsonl'
-    tab_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_tables.jsonl'
-    txt_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_texts.jsonl'
-    # Test the preparer
-    convs, img_lookups, tab_lookups, txt_lookups = prepare_all_data(q_path, img_path, tab_path, txt_path)
+    # Test the preparation of data with all modalities
+    print("Preparing all data for MMCoQA...")
+    qs_path = r'.\data\MMCoQA_dev.txt'
+    imgs_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_images.jsonl'
+    tabs_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_tables.jsonl'
+    txts_path = r'.\data\multimodalqa_final_dataset_pipeline_camera_ready_MMQA_texts.jsonl'
+    convs, imgs_lookups, tabs_lookups, txts_lookups = prepare_all_data(qs_path, imgs_path, tabs_path, txts_path)
     print(f"Loaded {len(convs)} conversations.")
-    print(f"Indexed {len(img_lookups)} image metadata.")
-    print(f"Indexed {len(tab_lookups)} tables metadata.")
-    print(f"Indexed {len(txt_lookups)} text passages metadata.")
+    print(f"Indexed {len(imgs_lookups)} image metadata.")
+    print(f"Indexed {len(tabs_lookups)} tables metadata.")
+    print(f"Indexed {len(txts_lookups)} text passages metadata.")
     # Demo: Retrieve the image metadata from conversation C_381
     print("Demo: Retrieve the first image metadata from conversation C_381...")
     turn = convs['C_381'][0]
     img_id = turn['answer'][0]['image_instances'][0]['doc_id']
     print(f"\nExample image metadata retrieval for ID {img_id}:")
-    print(img_lookups[img_id])
+    print(imgs_lookups[img_id])
