@@ -3,41 +3,133 @@ import pandas as pd
 from os import path
 from PIL import Image
 
-from data_loader import load_data
-from clip_analyzer import get_similarity
+from data_loader import prepare_all_data, construct_table_from_lookups
+from clip_analyzer import load_clip, get_img_txt_similarity
 
-DATA_PATH = '.\data\MMCoQA_dev.txt'
-IMG_DIR = r'.\data\final_dataset_images'
 
+# Streamlit configs & title
 st.set_page_config(page_title='MMCoQA Explorer', layout='wide', initial_sidebar_state='auto')
 st.title("MMCoQA Explorer")
+st.info("A tool for the exploration on MMCoQA data with multi-answer and multi-evidence support.")
+st.divider() # Separator line
+
+# Define global directories and paths
+DATA_DIR = './data/'
+QS_PATH = path.join(DATA_DIR, 'MMCoQA_dev.txt')
+IMGS_JSONL_PATH = path.join(DATA_DIR, 'multimodalqa_final_dataset_pipeline_camera_ready_MMQA_images.jsonl')
+IMG_FILES_DIR = path.join(DATA_DIR, 'final_dataset_images')
+TABS_PATH = path.join(DATA_DIR, 'multimodalqa_final_dataset_pipeline_camera_ready_MMQA_tables.jsonl')
+TXTS_PATH = path.join(DATA_DIR, 'multimodalqa_final_dataset_pipeline_camera_ready_MMQA_texts.jsonl')
+
+# Define helper function to display multi-modal evidences
+def display_evidence_card(question: str, ans: dict, turn_qid: str, card_index: int) -> None:
+    """Create a self-contained card for each answer and all its evidences."""
+    modality = ans.get('modality')
+    with st.container(height=None, border=True, key=f"card_{turn_qid}_{card_index}"):
+        st.subheader(f"Answer: \"{ans['answer']}\"")
+        st.caption(f"Modality: {modality.upper()}")
+        if modality == 'image' and ans.get('image_instances'):
+            # Display the modality in bold
+            st.markdown("**Image Evidence Instances:**")
+            for i, instance in enumerate(ans['image_instances']):
+                # Retrieve the image evidence by its ID provided in the answer
+                img_id = instance['doc_id']
+                # In case the evidence's somehow not found
+                if img_id in imgs_lookups:
+                    img_filename = imgs_lookups[img_id].get('path')
+                    img_path = path.join(IMG_FILES_DIR, img_filename)
+                    # In case the image evidence failed to load
+                    if path.exists(img_path):
+                        # Display the image evidence with its title, image content, analysis and URL
+                        with st.expander(label=f"Instance {i+1} '{imgs_lookups[img_id].get('title', '?')}'"):
+                            st.image(img_path, caption=f"Instance {i+1} '{imgs_lookups[img_id].get('title', '?')}'", use_column_width=True)
+                            # Unique key for each button is crucial for Streamlit
+                            if st.button("Analyze Q-I Similarity", key=f"clip_{turn_qid}_{card_index}_{i}"):
+                                with st.spinner("Running CLIP..."):
+                                    score = get_img_txt_similarity(img_path, question, model, processor)
+                                    st.metric(label="CLIP Score", value=f"{score:.2f}")
+                    else: st.warning(f"Image file `{img_filename}` not found.")
+                else: st.warning(f"Image instance with ID `{img_id}` cannot be presented.")
+        elif modality == 'table' and ans.get('table_indices'):
+            # Display the modality in bold
+            st.markdown("**Table Evidence Instances:**")
+            # Unlike image and text evidences, table_id is provided in the "question level"
+            # and every evidence is provided in indices in the "answer level"
+            # Hence, get back to the "question level" to get the table ID first
+            tab_id_from_q = st.session_state.current_q.get('table_id')
+            # In case the evidence's somehow not found
+            if tab_id_from_q in tabs_lookups and tabs_lookups[tab_id_from_q].get('table'):
+                tab_i = tabs_lookups[tab_id_from_q].get('table')
+                df = construct_table_from_lookups(tab_i)
+                # Highlight cells based on the indices
+                def highlight_cells(row): # function to be applied
+                    styles = [''] * len(row) # as for each row
+                    # For each pair of indices in the answer
+                    for row_idx, col_idx in ans['table_indices']:
+                        # If the indices are valid, highlight the cell
+                        if row.name == row_idx and col_idx < len(row):
+                            styles[col_idx] = 'background-color: #FFFF00;' # common yellow highlight
+                    return styles
+                # Display the table evidence with its title, table content and URL
+                with st.expander(label=f"Table Evidence from '{tabs_lookups[tab_id_from_q].get('title', '?')}'"):
+                    st.dataframe(df.style.apply(highlight_cells, axis=1), use_container_width=True) # for each row
+                    st.page_link(page=tabs_lookups[tab_id_from_q].get('url'), label=tabs_lookups[tab_id_from_q].get('url'))
+            else: st.warning(f"Table instance with ID `{tab_id_from_q}` cannot be presented.")
+        elif modality == 'text' and ans.get('text_instances'):
+            # Display the modality in bold
+            st.markdown("**Text Evidence Instances:**")
+            # For each text evidence in one answer
+            for i, instance in enumerate(ans['text_instances']):
+                # Retrieve the text evidence by its ID provided in the answer
+                txt_id = instance['doc_id']
+                # In case the evidence's somehow not found
+                if txt_id in txts_lookups:
+                    txt_i = txts_lookups[txt_id]
+                    # Display the text evidence with its title, content and URL
+                    with st.expander(label=f"Instance {i+1} from '{txt_i.get('title', '?')}'"):
+                        st.write(txt_i['text'])
+                        st.page_link(page=txt_i.get('url'), label=txt_i.get('url'))
+                else: st.warning(f"Text instance with ID `{txt_id}` cannot be presented.")
+        else:
+            st.write("No specific evidence instances found for this answer.")
 
 # Load and cache the data to avoid reloading on every interaction
 @st.cache_data
-def cache_data(file_path):
-    return load_data(file_path)
+def cache_prepared() -> tuple:
+    """Cache all processed conversations & lookups."""
+    return prepare_all_data(QS_PATH, IMGS_JSONL_PATH, TABS_PATH, TXTS_PATH)
 
-data = cache_data(DATA_PATH)
-# Display for investigation
-# data = {"qid": "C_802_8", "question": "What actor who made his feature film debut in the film \"Afterschool\" stared in Fantastic Beasts and Where to Find Them and stars Eddie Redmayne as Newt ?", "gold_question": "What actor who made his feature film debut in the film \"Afterschool\" stared in Fantastic Beasts and Where to Find Them and stars Eddie Redmayne as Newt ?", "answer": [{"answer": "Ezra Matthew Miller", "type": "string", "modality": "text", "text_instances": [{"doc_id": "5befee28f50f55b179e38b9a15c2a5b7", "part": "text", "start_byte": 0, "text": "Ezra Matthew Miller"}], "table_indices": [], "image_instances": []}], "question_type": "text", "table_id": "5690429e68c208d9327cbc06d1c46fc9", "history": [{"question": "In the first round of the 1976\u201377 Cypriot Cup, who did AEM Morphou play against?", "answer": [{"answer": "(A) EPA Larnaca", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[11, 0]], "image_instances": []}]}, {"question": "\"Something's Going On\" is the third and final single by rock band, released from their album \"Hi-Fi Serious\", it is used in the What's New, Scooby-Doo?, an American animated sitcom mystery comedy series produced by who?", "answer": [{"answer": "Warner Bros.", "type": "string", "modality": "text", "text_instances": [{"doc_id": "d79f43a6298171fffebac03ce4b6cec4", "part": "text", "start_byte": 89, "text": "Warner Bros"}], "table_indices": [], "image_instances": []}]}, {"question": "Beasts of Balance is a dexterity tabletop game which is played alongside a companion app for iOS and Android, it was originally titled \"Fabulous Beasts\", the game had to be renamed following a trademark dispute with this entertainment company. over which 2016 fantasy film directed by David Yates?", "answer": [{"answer": "Fantastic Beasts and Where to Find Them", "type": "string", "modality": "text", "text_instances": [{"doc_id": "32afa0e94bdf18e724a223c8ee78c67f", "part": "text", "start_byte": 0, "text": "Fantastic Beasts and Where to Find Them"}], "table_indices": [], "image_instances": []}]}, {"question": "Chuck Jones directed a version of the entertainment company of Jack and the Beanstalk in 1955. Elmer Fudd was the giant, and who played Jack?", "answer": [{"answer": "Daffy Duck", "type": "string", "modality": "text", "text_instances": [{"doc_id": "e6daca9430b8cf9efc2e964b1fc9be70", "part": "text", "start_byte": 193, "text": "Daffy Duck"}, {"doc_id": "32d826b4b89b1815d40b99556b94859c", "part": "text", "start_byte": 349, "text": "Daffy Duck"}], "table_indices": [], "image_instances": []}]}, {"question": "Which Syncopy Inc. movie title(s) that has/have a tall building in the background of its poster?", "answer": [{"answer": "The Dark Knight (film)", "type": "string", "modality": "image", "text_instances": [], "table_indices": [], "image_instances": [{"doc_id": "f60afcdec9238132fc0f6d11e54c6457", "doc_part": "image"}]}, {"answer": "Inception", "type": "string", "modality": "image", "text_instances": [], "table_indices": [], "image_instances": [{"doc_id": "3f02d360ef0bf4ea2af7e0e7602fe5a7", "doc_part": "image"}]}]}, {"question": "Which Syncopy Inc. movie title(s) distributed by the entertainment company?", "answer": [{"answer": "Batman Begins", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[0, 1]], "image_instances": []}, {"answer": "The Dark Knight", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[2, 1]], "image_instances": []}, {"answer": "Inception", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[3, 1]], "image_instances": []}, {"answer": "The Dark Knight Rises", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[4, 1]], "image_instances": []}, {"answer": "Man of Steel", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[5, 1]], "image_instances": []}, {"answer": "Dunkirk", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[7, 1]], "image_instances": []}, {"answer": "Tenet", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[8, 1]], "image_instances": []}]}, {"question": "Which Syncopy Inc. movie title(s) distributed by the entertainment company and that has/have a tall building in the background of its poster?", "answer": [{"answer": "The Dark Knight", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[2, 1]], "image_instances": []}, {"answer": "Inception", "type": "string", "modality": "table", "text_instances": [], "table_indices": [[3, 1]], "image_instances": []}]}, {"question": "What film was directed by a British film editor and was a 2010 British-American fantasy film distributed by the entertainment company?", "answer": [{"answer": "Harry Potter and the Deathly Hallows \u2013 Part 1", "type": "string", "modality": "text", "text_instances": [{"doc_id": "e41c9c34f223e7cad7f99996e0c6bd7f", "part": "text", "start_byte": 0, "text": "Harry Potter and the Deathly Hallows \u2013 Part 1"}], "table_indices": [], "image_instances": []}]}]}
-# st.json(data)
+@st.cache_resource
+def cache_clip() -> tuple:
+    """Cache the CLIP model in Streamlit cache for 'resource' according to the documentation."""
+    return load_clip()
 
-sample_dialogue = data[45]['history']
-analysis_results = []
+try:
+    convs, imgs_lookups, tabs_lookups, txts_lookups = cache_prepared()
+    model, processor = cache_clip()
+except Exception as e:
+    st.error(f"Error loading data or model: {e}")
+    st.stop()
 
-for turn in sample_dialogue:
-    question = turn['question']
-    answer = turn['answer']
-    if answer['type'] == 'image': # for answers of type 'image'
-        img_paths = []
-        img_dir = r'.\data\final_dataset_images'
-        for i in answer['image_instances']: # for each instance in the answer
-            img_name = i.get('doc_id', None)  # Ensure 'doc_id' (i.e., the image name) exists
-            try:
-                img_path = path.join(img_dir, img_name + '.jpg')
-            except FileNotFoundError as e:
-                img_path = path.join(img_dir, img_name + '.png')
-            if path.exists(img_path):
-                img_paths.append(img_path)
-        for img_path in img_paths:
-            pass
+# Sidebar for conversation selection
+st.sidebar.header("Conversation Selection")
+conv_ids = sorted(convs.keys())
+selected_conv_id = st.sidebar.selectbox("Choose a Conversation: ", conv_ids)
+selected_conv = convs[selected_conv_id]
+
+# Main Content Display
+if selected_conv_id:
+    st.header(f"MMCoQA Exploring on Conversation `{selected_conv_id}`")
+    # For each turn/question in one conversation
+    for i, turn in enumerate(selected_conv):
+        # Store the turn state for later access
+        st.session_state.current_q = turn
+        with st.container(border=True):
+            st.markdown(f"## Turn {i+1}: `{turn['qid']}`")
+            # Display the current question for referencing
+            st.markdown(f"### Question: {turn['question']}")
+            # For each answer in one turn/question
+            for j, ans in enumerate(turn['answer']):
+                display_evidence_card(turn['question'], ans, turn['qid'], j)
+else:
+    st.header("MMCoQA Explorer")
