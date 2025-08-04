@@ -10,7 +10,7 @@ from clip_analyzer import load_clip, get_img_txt_similarity
 # Streamlit configs & title
 st.set_page_config(page_title='MMCoQA Explorer', layout='wide', initial_sidebar_state='auto')
 st.title("MMCoQA Explorer")
-st.info("A tool for the exploration on MMCoQA data with multi-answer and multi-evidence support.")
+st.info("An interactive tool for the exploration on the MMCoQA dataset with multi-answer/multi-evidence support/visualization and text-image similarity analysis via CLIP.")
 st.divider() # Separator line
 
 # Define global directories and paths
