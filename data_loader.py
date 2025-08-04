@@ -61,9 +61,19 @@ def construct_table_from_lookups(tab_json: dict[str, dict]) -> pd.DataFrame:
     Returns:
         df (pd.DataFrame): DataFrame containing the table data.
     """
-    headers = [header['column_name'] for header in tab_json['header']]
+    raw_headers = [header['column_name'] for header in tab_json['header']]
+    # Duplicate headers exist (e.g., C_1058_1 upon testing) -- need to handle them for later styling
+    unique_headers = []
+    counters = {}
+    for h in raw_headers:
+        if h not in counters:
+            unique_headers.append(h)
+            counters[h] = 1
+        else:
+            counters[h] += 1
+            unique_headers.append(f"{h} ({counters[h]})")  # e.g., "Score" & "Score (2)" for duplicates
     rows = [[cell['text'] for cell in row] for row in tab_json['table_rows']]
-    df = pd.DataFrame(rows, columns=headers)
+    df = pd.DataFrame(rows, columns=unique_headers)
     return df
 
 def prepare_all_data(qs_path: str, imgs_path: str, tabs_path: str, txts_path: str) -> tuple[dict[str, list[dict]], dict[str, dict], dict[str, dict], dict[str, dict]]:
@@ -84,15 +94,12 @@ def prepare_all_data(qs_path: str, imgs_path: str, tabs_path: str, txts_path: st
     imgs_data = load_data(imgs_path)
     tabs_data = load_data(tabs_path)
     txts_data = load_data(txts_path)
-
     print("Step 2: Grouping questions into conversations...")
-    convs = group_by_conversation(q_data)
-
+    convs = group_by_conversation(qs_data)
     print("Step 3: Constructing lookups for all modalities' evidences...")
     imgs_lookups = construct_lookups(imgs_data)
     tabs_lookups = construct_lookups(tabs_data)
     txts_lookups = construct_lookups(txts_data)
-
     print("Data Preparation Complete.\n")
     return convs, imgs_lookups, tabs_lookups, txts_lookups
 
