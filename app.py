@@ -10,7 +10,7 @@ from clip_analyzer import load_clip, get_img_txt_similarity
 # Streamlit configs & title
 st.set_page_config(page_title='MMCoQA Explorer', layout='wide', initial_sidebar_state='auto')
 st.title("MMCoQA Explorer")
-st.info("An interactive tool for the exploration on the MMCoQA dataset with multi-answer/multi-evidence support/visualization and text-image similarity analysis via CLIP.")
+st.info("An interactive tool for the exploration on the `MMCoQA` dataset, built to better understand its multimodal, and conversational structure, with multi-answer/multi-evidence support/visualization and text-image similarity analysis via `clip-vit-large-patch14`.")
 st.divider() # Separator line
 
 # Define global directories and paths
@@ -42,7 +42,7 @@ def display_evidence_card(question: str, ans: dict, turn_qid: str, card_index: i
                     if path.exists(img_path):
                         # Display the image evidence with its title, image content, analysis and URL
                         with st.expander(label=f"Instance {i+1} '{imgs_lookups[img_id].get('title', '?')}'"):
-                            st.image(img_path, caption=f"Instance {i+1} '{imgs_lookups[img_id].get('title', '?')}'", use_column_width=True)
+                            st.image(img_path, caption=f"Instance {i+1} '{imgs_lookups[img_id].get('title', '?')}'", use_container_width=True)
                             # Unique key for each button is crucial for Streamlit
                             if st.button("Analyze Q-I Similarity", key=f"clip_{turn_qid}_{card_index}_{i}"):
                                 with st.spinner("Running CLIP..."):
@@ -68,7 +68,7 @@ def display_evidence_card(question: str, ans: dict, turn_qid: str, card_index: i
                     for row_idx, col_idx in ans['table_indices']:
                         # If the indices are valid, highlight the cell
                         if row.name == row_idx and col_idx < len(row):
-                            styles[col_idx] = 'background-color: #FFFF00;' # common yellow highlight
+                            styles[col_idx] = 'background-color: #5CE488;' # Streamlit dark mode's green highlight
                     return styles
                 # Display the table evidence with its title, table content and URL
                 with st.expander(label=f"Table Evidence from '{tabs_lookups[tab_id_from_q].get('title', '?')}'"):

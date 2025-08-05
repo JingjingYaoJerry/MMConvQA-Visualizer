@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # Test the Loading and similarity calculation
     img_path = r'.\data\final_dataset_images' + r"\f60afcdec9238132fc0f6d11e54c6457" + '.jpg'
     question = "Which Syncopy Inc. movie title(s) that has/have a tall building in the background of its poster?"
-    model, processor = load_clip_model_core()
+    model, processor = load_clip()
     # Get similarity score
     score = get_img_txt_similarity(img_path=img_path, text=question, model=model, processor=processor)
     print(f"Similarity Score: {score}")
