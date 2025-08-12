@@ -8,9 +8,9 @@ from clip_analyzer import load_clip, get_img_txt_similarity
 
 
 # Streamlit configs & title
-st.set_page_config(page_title='MMCoQA Explorer', layout='wide', initial_sidebar_state='auto')
-st.title("MMCoQA Explorer")
-st.info("An interactive tool for the exploration on the `MMCoQA` dataset, built to better understand its multimodal, and conversational structure, with multi-answer/multi-evidence support/visualization and text-image similarity analysis via `clip-vit-large-patch14`.")
+st.set_page_config(page_title='MMConvQA Visualizer', layout='wide', initial_sidebar_state='auto')
+st.title("MMConvQA Visualizer")
+st.info("An interactive tool for the visualization on the `MMConvQA` dataset, built to better understand its multimodal, and conversational structure, with multi-answer/multi-evidence support and text-image similarity analysis via `clip-vit-large-patch14`.")
 st.divider() # Separator line
 
 # Define global directories and paths
@@ -46,8 +46,30 @@ def display_evidence_card(question: str, ans: dict, turn_qid: str, card_index: i
                             # Unique key for each button is crucial for Streamlit
                             if st.button("Analyze Q-I Similarity", key=f"clip_{turn_qid}_{card_index}_{i}"):
                                 with st.spinner("Running CLIP..."):
+                                    # Get all image evidence instances in the entire conversation for later similarity computations
+                                    conv_imgs = []
+                                    for turn in st.session_state.current_conv:
+                                        for a in turn['answer']:
+                                            if a.get('modality') == 'image':
+                                                for inst in a['image_instances']:
+                                                    conv_imgs.append(inst['doc_id'])
+                                    # Compute the CLIP score between the question and the image instance (as the baseline)
                                     score = get_img_txt_similarity(img_path, question, model, processor)
-                                    st.metric(label="CLIP Score", value=f"{score:.2f}")
+                                    st.metric(label="CLIP Score", value=f"{score:.2f}") # Display the CLIP score for the current image instance first
+                                    # Compute similarity scores between the question and all image instances in the conversation and rank
+                                    scores = []
+                                    for conv_img in conv_imgs:
+                                        # Skip the current/same image evidence instance to avoid self-comparison
+                                        if conv_img != img_id:
+                                            conv_img_path = path.join(IMG_FILES_DIR, imgs_lookups[conv_img].get('path'))
+                                            scores.append(get_img_txt_similarity(conv_img_path, question, model, processor))
+                                    # Rank if more than one image instance (other than the current/same one)
+                                    if len(scores) >= 1:
+                                        rank = sum(1 for s in scores if s > score) + 1 # count up all scores that are greater than the current score and add 1 for the current instance
+                                        st.metric(label="All Other Image Evidences' CLIP Scores within the Conversation", value=", ".join([f"{s:.2f}" for s in scores]))
+                                        st.metric(label="Rank (Position) among all Image Evidences within the Conversation", value=f"{rank} / {len(scores) + 1}") # +1 for the current instance
+                                    else:
+                                        st.write("No other image evidences in the conversation -- No Ranking Applied.")
                     else: st.warning(f"Image file `{img_filename}` not found.")
                 else: st.warning(f"Image instance with ID `{img_id}` cannot be presented.")
         elif modality == 'table' and ans.get('table_indices'):
@@ -119,7 +141,9 @@ selected_conv = convs[selected_conv_id]
 
 # Main Content Display
 if selected_conv_id:
-    st.header(f"MMCoQA Exploring on Conversation `{selected_conv_id}`")
+    # Store the conversation ID in session state for later access
+    st.session_state.current_conv = selected_conv
+    st.header(f"MMConvQA Exploring on Conversation `{selected_conv_id}`")
     # For each turn/question in one conversation
     for i, turn in enumerate(selected_conv):
         # Store the turn state for later access
@@ -132,4 +156,4 @@ if selected_conv_id:
             for j, ans in enumerate(turn['answer']):
                 display_evidence_card(turn['question'], ans, turn['qid'], j)
 else:
-    st.header("MMCoQA Explorer")
+    st.header("MMConvQA Visualizer")

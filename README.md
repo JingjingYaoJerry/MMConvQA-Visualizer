@@ -1,12 +1,11 @@
-# MMCoQA Deep Dive Explorer
+# MMConvQA Visualizer
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.47+-red.svg)](https://streamlit.io)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Transformers-yellow.svg)](https://huggingface.co/transformers/)
 [![Made-with-Love](https://img.shields.io/badge/Made%20with-❤️-ff69b4.svg)](https://www.linkedin.com/in/%E4%BA%AC%E6%99%B6-%E5%A7%9A-9997b5180/)
 
-An interactive tool for the exploration on the `MMCoQA` dataset, built to better understand its multimodal, and conversational structure, with multi-answer/multi-evidence support/visualization and text-image similarity analysis via `
-clip-vit-large-patch14`.
+An interactive tool for the exploration on the `MMConvQA` dataset, built to better understand its multimodal, and conversational structure, with multi-answer/multi-evidence support and text-image similarity analysis via `clip-vit-large-patch14`.
 
 ---
 
@@ -19,8 +18,11 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 **[Link to the video]**
 
 ![Table Evidence Construction Demo](/assets/images/table_demo.png "Table Evidence Construction Demo")
+
 ![Multimodal Support Demo](/assets/images/multimodal_demo.png "Multimodal Support Demo")
+
 ![Multi-Evidence Support Demo](/assets/images/multi-evidence_demo.png "Multi-Evidence Support Demo")
+
 ![Q-I Similarity Analysis Demo](/assets/images/similarity_demo.png "Q-I Similarity Analysis Demo")
 
 ---
@@ -34,7 +36,8 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
     * **Tables**: Reconstructing tables from the source `...tables.jsonl` file, highlighting the specific cells cited as evidence.
     * **Text**: Showing the full text passage cited as evidence.
 * **Multi-Answer & Multi-Evidence Supporting**: Appropriately handling cases where a single question has multiple answers, or an answer is supported by multiple multimodal evidences.
-* **Interactive Q-I Analysis**: Integrating the `clip-vit-large-patch14` CLIP model to provide similarity scores between a question and its associated image evidence, offering insights into text-image alignment.
+* **Interactive Q-I Analysis**: Integrating the `clip-vit-large-patch14` CLIP model to provide naive similarity scores between a question and its associated image evidence, offering insights into text-image alignment.
+* **Image Evidences' Ranking**: Rank all image evidence instances in the current conversation by their CLIP similarity to the question, highlighting the position of the correct evidence image.
 
 --- 
 
@@ -42,14 +45,14 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/JingjingYaoJerry/MMCoQA-Explorer.git
+    git clone https://github.com/JingjingYaoJerry/MMConvQA-Visualizer.git
     ```
 
 2.  **Set up the data directory:**
     * Create a `data` folder inside the root.
-    * Download the official MMCoQA dataset files and place them inside `data/`. The final structure should be something like:
+    * Download the official `MMCoQA` dataset files and place them inside `data/`. The final structure should be something like:
         ```
-        MMCoQA-Explorer/
+        MMConvQA-Visualizer/
         ├── data/
         │   ├── MMCoQA_dev.txt
         │   ├── MMCoQA_test.txt
@@ -78,10 +81,10 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 ### Project Structure
 
 * `app.py`: The Streamlit application file, handling UI with interactions.
-* `data_loader.py`: The module for loading, parsing, and pre-processing the MMCoQA data into groups, tables and efficient lookup structures.
+* `data_loader.py`: The module for loading, parsing, and pre-processing the MMConvQA data into groups, tables and efficient lookup structures.
 * `clip_analyzer.py`: The module for loading the CLIP model via Hugging Face and performing similarity analysis.
 * `requirements.txt`: A list of all necessary Python packages.
-* `./data/`: The directory for storing all MMCoQA dataset ([please refer to the team's project page](https://github.com/liyongqi67/MMCoQA?tab=readme-ov-file)).
+* `./data/`: The directory for storing all `MMCoQA` datasets ([please refer to the team's project page](https://github.com/liyongqi67/MMCoQA?tab=readme-ov-file)).
 
 ---
 
