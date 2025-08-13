@@ -15,7 +15,7 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 
 **Instead, a short video walkthrough of the application is available here:**
 
-[![Demo](/assets/vids/demo.png)](/assets/vids/demo.mp4)
+[![Demo](/assets/images/demo.png)](/assets/vids/demo.mp4)
 
 ![Table Evidence Construction Demo](/assets/images/table_demo.png "Table Evidence Construction Demo")
 
