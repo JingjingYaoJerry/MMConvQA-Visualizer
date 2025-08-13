@@ -85,7 +85,9 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 * `app.py`: The Streamlit application file, handling UI with interactions.
 * `data_loader.py`: The module for loading, parsing, and pre-processing the MMConvQA data into groups, tables and efficient lookup structures.
 * `clip_analyzer.py`: The module for loading the CLIP model via Hugging Face and performing similarity analysis.
+* `scores_analyzer.py`: The program for computing all Q-I CLIP similarity scores across the dataset and visualizing the summary statistics & distribution.
 * `requirements.txt`: A list of all necessary Python packages.
+* `./assets/`: The directory for storing all screenshots and video demo.
 * `./data/`: The directory for storing all `MMCoQA` datasets ([please refer to the team's project page](https://github.com/liyongqi67/MMCoQA?tab=readme-ov-file)).
 
 ---
