@@ -17,6 +17,8 @@ Due to the use-case restrictions of the `openai/clip-vit-large-patch14` model ch
 
 [![Demo](/assets/images/demo.png)](/assets/vids/demo.mp4)
 
+**Or, here are some screenshots of the key features:**
+
 ![Table Evidence Construction Demo](/assets/images/table_demo.png "Table Evidence Construction Demo")
 
 ![Multimodal Support Demo](/assets/images/multimodal_demo.png "Multimodal Support Demo")
