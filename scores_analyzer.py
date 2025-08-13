@@ -93,13 +93,14 @@ if __name__ == "__main__":
 
         # Visualize the Distribution
         print("\nGenerating score distribution plot...")
-        plt.style.use('seaborn-v0_8-whitegrid')
+        plt.style.use('seaborn-v0_8-whitegrid') # show grid
         plt.figure(figsize=(12, 6))
+        # Utilize pandas' built-in `plot` method to conveniently convert the array to a matplotlib histogram
         pd.Series(scores_array).plot(kind='hist', bins=50, title='Distribution of CLIP Q-I Similarity Scores in MMCoQA Dev Set')
         plt.xlabel("CLIP Similarity Score")
         plt.ylabel("Frequency")
         plt.axvline(avg_score, color='r', linestyle='--', linewidth=2, label=f'Average Score: {avg_score:.2f}')
-        plt.axvline(0.3, color='g', linestyle=':', linewidth=2, label='Threshold = 0.30')
+        plt.axvline(0.4, color='g', linestyle=':', linewidth=2, label='Threshold = 0.40')
         plt.legend()
-        plt.tight_layout()
+        plt.tight_layout() # ensure all components of the visualization are properly displayed
         plt.show()
